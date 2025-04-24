@@ -4,49 +4,44 @@ on:
   push:
     branches: [main]
     paths:
-      - 'lambda/**/lambda_function.py'  # Keep lowercase in trigger
+      - 'Lambda/**/lambda_function.py'
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: 🔍 Smart Directory Detection
-        run: |
-          echo "=== WORKING DIRECTORY ==="
-          pwd
-          
-          # Try both cases
-          echo "=== ATTEMPTING LAMBDA FILES ==="
-          [ -d "Lambda/" ] && dir="Lambda" || dir="lambda"
-          ls -la $dir/*/lambda_function.py || echo "No Lambda files found"
-          
-          echo "=== GIT CHANGES ==="
-          git diff --name-only HEAD^ HEAD || echo "Initial commit"
+      - name: 🔍 Checkout code
+        uses: actions/checkout@v4
 
-      - uses: actions/checkout@v4
-
-      - name: 🔑 Configure AWS
+      - name: 🔑 Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
       - name: 📦 Deploy Functions
         run: |
-          # Auto-detect directory case
-          [ -d "Lambda/" ] && lambda_dir="Lambda" || lambda_dir="lambda"
-          
-          cd $lambda_dir
-          for func in */; do
-            func=${func%/}
-            cd $func
-            zip -r ../$func.zip .
+          # List of all Lambda functions in your project
+          FUNCTIONS=(
+            "add_inventory_item"
+            "delete_inventory_item"
+            "get_all_inventory_items"
+            "get_inventory_item"
+            "get_location_inventory_items"
+          )
+
+          # Deploy each function if its directory exists
+          for func in "${FUNCTIONS[@]}"; do
+            echo "🚀 Deploying $func function..."
+            cd "Lambda/$func"
+            zip -r function.zip .
             aws lambda update-function-code \
               --function-name $func \
-              --zip-file fileb://../$func.zip \
+              --zip-file fileb://function.zip \
               --publish
-            rm ../$func.zip
-            cd ..
+            rm function.zip
+            cd ../..
           done
