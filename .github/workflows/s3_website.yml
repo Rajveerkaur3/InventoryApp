@@ -50,7 +50,7 @@ jobs:
             --include "js/*" \
             --cache-control "max-age=3600"
 
-      # 5. Set bucket policy for public access (if needed)
+      # 5. Set bucket policy for public access
       - name: Configure public access
         run: |
           aws s3api put-bucket-policy \
@@ -65,9 +65,9 @@ jobs:
               }]
             }'
 
-      # 6. Invalidate CloudFront cache (optional)
+      # 6. Invalidate CloudFront cache (only if distribution ID exists)
       - name: Invalidate CloudFront cache
-        if: success() && secrets.CLOUDFRONT_DISTRIBUTION_ID
+        if: ${{ success() && secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
         run: |
           aws cloudfront create-invalidation \
             --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
