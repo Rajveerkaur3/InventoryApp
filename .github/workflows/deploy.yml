@@ -1,44 +1,49 @@
-name: Deploy Python functions to AWS Lambda
+name: Deploy Lambda Functions
 
 on:
+  pull_request:
+    branches:
+      - 'main'
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
-      - 'lambda/**/lambda_function.py'  # Trigger if any Lambda function changes
+      - 'lambda//lambda_function.py'
 
 jobs:
   deploy:
+    name: Deploy Updated Lambda Function
     runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        function:
+          - get_all_inventory_items
+          - get_inventory_item
+          - add_inventory_item
+          - delete_inventory_item
+          - get_location_inventory_items
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-east-1
+          python-version: '3.12'
 
-      - name: Get changed Lambda functions
-        id: changed-functions
+      - name: Zip Lambda Function
         run: |
-          # List all Lambda function directories that were modified
-          CHANGED_FUNCTIONS=$(git diff --name-only HEAD^ HEAD -- 'lambda/*/lambda_function.py' | awk -F/ '{print $2}' | uniq)
-          echo "Changed functions: $CHANGED_FUNCTIONS"
-          echo "::set-output name=functions::${CHANGED_FUNCTIONS}"
+          cd lambda/${{ matrix.function }}
+          zip -r ../../${{ matrix.function }}.zip .
 
-      - name: Deploy changed functions
-        run: |
-          for FUNCTION in ${{ steps.changed-functions.outputs.functions }}; do
-            echo "Deploying $FUNCTION..."
-            cd lambda/$FUNCTION
-            zip -r function.zip lambda_function.py
-            aws lambda update-function-code \
-              --function-name $FUNCTION \
-              --zip-file fileb://function.zip \
-              --publish
-            rm function.zip
-            cd ../..
-          done
+      - name: Deploy to AWS Lambda
+        uses: appleboy/lambda-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          function_name: ${{ matrix.function }}
+          zip_file: ${{ matrix.function }}.zip
+          region: us-east-1
