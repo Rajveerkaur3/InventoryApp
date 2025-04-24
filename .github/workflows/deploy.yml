@@ -1,23 +1,15 @@
-
-
-
 name: Deploy Python functions to AWS Lambda
 
-
 on:
-  pull_request:
-    branches:
-      - 'main'
   push:
     branches:
       - 'main'
     paths:
- dev
-      - 'lambda//lambda_function.py'
+      - 'lambda/**/lambda_function.py'  # Only run when a lambda_function.py is modified
 
 jobs:
   deploy:
-    name: Deploy Updated Lambda Function
+    name: Deploy Updated Lambda Functions
     runs-on: ubuntu-latest
 
     strategy:
@@ -31,36 +23,8 @@ jobs:
 
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
-      - name: Zip Lambda Function
-        run: |
-          cd lambda/${{ matrix.function }}
-          zip -r ../../${{ matrix.function }}.zip .
-
-      - name: Deploy to AWS Lambda
-        uses: appleboy/lambda-action@master
-        with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-          function_name: ${{ matrix.function }}
-          zip_file: ${{ matrix.function }}.zip
-          region: us-east-1
-
-      - 'lambda/get_all_inventory_items/lambda_function.py'
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
@@ -68,13 +32,18 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - name: Zip the get_all_inventory_items Lambda function
-        run: zip function.zip lambda_function.py
-        working-directory: ./lambda/get_all_inventory_items
-      - name: Update Lambda function code
-        run: aws lambda update-function-code --function-name get_all_inventory_items --zip-file fileb://function.zip --publish
-        working-directory: ./lambda/get_all_inventory_items
-      - name: Cleanup get_all_inventory_items zip
-        run: rm function.zip
-        working-directory: ./lambda/get_all_inventory_items
 
+      - name: Zip Lambda function
+        run: |
+          cd lambda/${{ matrix.function }}
+          zip -r ../../${{ matrix.function }}.zip .
+
+      - name: Deploy to AWS Lambda
+        run: |
+          aws lambda update-function-code \
+            --function-name ${{ matrix.function }} \
+            --zip-file fileb://${{ matrix.function }}.zip \
+            --publish
+
+      - name: Cleanup
+        run: rm ${{ matrix.function }}.zip
