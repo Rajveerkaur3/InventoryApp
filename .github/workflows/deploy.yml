@@ -25,7 +25,7 @@ jobs:
 
       - name: Deploy get_all_inventory_items Lambda Function
         run: |
-          zip -r get_all_inventory_items.zip lambda/get_all_inventory_items/*
+          zip -r get_all_inventory_items.zip "lambda/get_all_inventory_items/*"
           aws lambda update-function-code \
             --function-name get_all_inventory_items \
             --zip-file fileb://get_all_inventory_items.zip
