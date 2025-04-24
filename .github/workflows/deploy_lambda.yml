@@ -1,4 +1,4 @@
-name: Deploy Lambda Functions
+name: 🚀 Deploy Lambda Functions
 
 on:
   push:
@@ -15,31 +15,33 @@ jobs:
       contents: read
 
     steps:
-      # Debugging step - will show why workflow runs/skips
-      - name: Inspect changes
+      - name: 🔍 Debug - Show directory structure
         run: |
-          echo "=== Changed files ==="
-          git diff --name-only HEAD^ HEAD || echo "No previous commit"
-          echo "=== Lambda files ==="
+          echo "=== WORKING DIRECTORY ==="
+          pwd
+          echo "=== LAMBDA FILES ==="
           ls -la lambda/*/lambda_function.py
+          echo "=== GIT CHANGES ==="
+          git diff --name-only HEAD^ HEAD || echo "Initial commit"
 
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Required for git diff
+          fetch-depth: 2
 
-      - name: Configure AWS
+      - name: 🔑 Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Deploy all Lambda functions
+      - name: 📦 Deploy Functions
         run: |
           for func in $(ls lambda/); do
-            echo "Deploying $func..."
+            echo "📦 Packaging $func..."
             cd lambda/$func
             zip -r ../$func.zip .
+            echo "🚀 Deploying $func..."
             aws lambda update-function-code \
               --function-name $func \
               --zip-file fileb://../$func.zip \
