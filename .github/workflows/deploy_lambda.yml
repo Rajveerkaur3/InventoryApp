@@ -1,11 +1,11 @@
-name: Deploy Python functions to AWS Lambda
+name: Deploy Lambda Functions
 
 on:
   push:
     branches: [main]
     paths:
-      - 'lambda/**/lambda_function.py'  # Double-star pattern for reliability
-  workflow_dispatch:  # Allows manual triggering
+      - 'lambda/**/lambda_function.py'
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -14,42 +14,36 @@ jobs:
       id-token: write
       contents: read
 
-    strategy:
-      matrix:
-        function: [
-          'get_all_inventory_items',
-          'get_inventory_item',
-          'add_inventory_item',
-          'delete_inventory_item',
-          'get_location_inventory_items'
-        ]
-
     steps:
-      # Debugging step (will show why workflow triggered or didn't)
+      # Debugging step - will show why workflow runs/skips
       - name: Inspect changes
         run: |
-          echo "=== Changed files in this commit ==="
-          git diff --name-only HEAD^ HEAD
-          echo "=== Matching Lambda files ==="
-          git diff --name-only HEAD^ HEAD | grep 'lambda/.*/lambda_function.py' || echo "No Lambda files modified"
+          echo "=== Changed files ==="
+          git diff --name-only HEAD^ HEAD || echo "No previous commit"
+          echo "=== Lambda files ==="
+          ls -la lambda/*/lambda_function.py
 
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Needed for git diff to work
+          fetch-depth: 2  # Required for git diff
 
-      - name: Configure AWS credentials
+      - name: Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Package and deploy Lambda
+      - name: Deploy all Lambda functions
         run: |
-          cd lambda/${{ matrix.function }}
-          zip -r ../${{ matrix.function }}.zip .
-          aws lambda update-function-code \
-            --function-name ${{ matrix.function }} \
-            --zip-file fileb://../${{ matrix.function }}.zip \
-            --publish
-          rm ../${{ matrix.function }}.zip
+          for func in $(ls lambda/); do
+            echo "Deploying $func..."
+            cd lambda/$func
+            zip -r ../$func.zip .
+            aws lambda update-function-code \
+              --function-name $func \
+              --zip-file fileb://../$func.zip \
+              --publish
+            rm ../$func.zip
+            cd ../..
+          done
