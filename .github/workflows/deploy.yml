@@ -25,35 +25,35 @@ jobs:
 
       - name: Deploy get_all_inventory_items Lambda Function
         run: |
-          zip -r get_all_inventory_items.zip "lambda/get_all_inventory_items/*"
+          zip -r get_all_inventory_items.zip lambda/get_all_inventory_items
           aws lambda update-function-code \
             --function-name get_all_inventory_items \
             --zip-file fileb://get_all_inventory_items.zip
 
       - name: Deploy get_inventory_item Lambda Function
         run: |
-          zip -r get_inventory_item.zip lambda/get_inventory_item/*
+          zip -r get_inventory_item.zip lambda/get_inventory_item
           aws lambda update-function-code \
             --function-name get_inventory_item \
             --zip-file fileb://get_inventory_item.zip
 
       - name: Deploy add_inventory_item Lambda Function
         run: |
-          zip -r add_inventory_item.zip lambda/add_inventory_item/*
+          zip -r add_inventory_item.zip lambda/add_inventory_item
           aws lambda update-function-code \
             --function-name add_inventory_item \
             --zip-file fileb://add_inventory_item.zip
 
       - name: Deploy delete_inventory_item Lambda Function
         run: |
-          zip -r delete_inventory_item.zip lambda/delete_inventory_item/*
+          zip -r delete_inventory_item.zip lambda/delete_inventory_item
           aws lambda update-function-code \
             --function-name delete_inventory_item \
             --zip-file fileb://delete_inventory_item.zip
 
       - name: Deploy get_location_inventory_items Lambda Function
         run: |
-          zip -r get_location_inventory_items.zip lambda/get_location_inventory_items/*
+          zip -r get_location_inventory_items.zip lambda/get_location_inventory_items
           aws lambda update-function-code \
             --function-name get_location_inventory_items \
             --zip-file fileb://get_location_inventory_items.zip
