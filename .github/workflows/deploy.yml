@@ -1,59 +1,31 @@
-name: Deploy Website to S3 Bucket
+name: Deploy Python functions to AWS Lambda
 
 on:
   push:
     branches:
-      - main
+      - 'main'
     paths:
-      - 'index.html'
-      - 'assets/**'
-      - 'css/**'
-      - 'js/**'
+      - 'lambda/get_all_inventory_items/lambda_function.py'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
-      # 1. Checkout code
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      # 2. Install AWS CLI (ensures latest version)
-      - name: Install AWS CLI
-        run: |
-          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
-          unzip awscliv2.zip
-          sudo ./aws/install
-          aws --version  # Verify installation
-
-      # 3. Configure AWS credentials
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      - name: Set AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-
-      # 4. Debugging: Verify files and permissions
-      - name: Validate environment
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -la index.html assets/ css/ js/
-          aws sts get-caller-identity
-          aws s3 ls s3://finalproject-2025/ || echo "Bucket listing test"
-
-      # 5. Fixed S3 upload (single-line command)
-      - name: Upload files to S3
-        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --acl public-read --cache-control "max-age=3600"
-
-      # 6. CloudFront cache invalidation (optional)
-      - name: Invalidate CloudFront cache
-        if: success()
-        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/index.html" "/assets/*" "/css/*" "/js/*"
+      - name: Zip the get_all_inventory_items Lambda function
+        run: zip function.zip lambda_function.py
+        working-directory: ./lambda/get_all_inventory_items
+      - name: Update Lambda function code
+        run: aws lambda update-function-code --function-name get_all_inventory_items --zip-file fileb://function.zip --publish
+        working-directory: ./lambda/get_all_inventory_items
+      - name: Cleanup get_all_inventory_items zip
+        run: rm function.zip
+        working-directory: ./lambda/get_all_inventory_items
