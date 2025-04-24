@@ -1,45 +1,44 @@
 ---
 name: Super-Linter
-
+ 
 on:
   pull_request:
     types: [opened, reopened]
-
+ 
 permissions: {}
-
+ 
 jobs:
   build:
     name: Lint
     runs-on: ubuntu-latest
-
+ 
     permissions:
       contents: read
       packages: read
       statuses: write  # Status checks on PR
-
+ 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+ 
       - name: Super-linter
         uses: super-linter/super-linter@v7.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
           # Fix auto-formatters
           FIX_HTML_PRETTIER: true
           FIX_PYTHON_BLACK: true
           FIX_YAML_PRETTIER: true
-
+ 
           # Selectively disable noisy/failing linters
           VALIDATE_PYTHON_PYLINT: false
           VALIDATE_PYTHON_MYPY: false
           VALIDATE_PYTHON_ISORT: false
           VALIDATE_PYTHON_RUFF: false
           VALIDATE_PYTHON_FLAKE8: false
-
+ 
           # Disable markdown & language style checks if not needed
           VALIDATE_MARKDOWN: false
           VALIDATE_MARKDOWN_PRETTIER: false

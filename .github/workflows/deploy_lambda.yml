@@ -1,0 +1,51 @@
+name: 🚀 Deploy Lambda Functions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'lambda/**/lambda_function.py'
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: 🔍 Debug - Show directory structure
+        run: |
+          echo "=== WORKING DIRECTORY ==="
+          pwd
+          echo "=== LAMBDA FILES ==="
+          ls -la lambda/*/lambda_function.py
+          echo "=== GIT CHANGES ==="
+          git diff --name-only HEAD^ HEAD || echo "Initial commit"
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 🔑 Configure AWS
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: 📦 Deploy Functions
+        run: |
+          for func in $(ls lambda/); do
+            echo "📦 Packaging $func..."
+            cd lambda/$func
+            zip -r ../$func.zip .
+            echo "🚀 Deploying $func..."
+            aws lambda update-function-code \
+              --function-name $func \
+              --zip-file fileb://../$func.zip \
+              --publish
+            rm ../$func.zip
+            cd ../..
+          done
