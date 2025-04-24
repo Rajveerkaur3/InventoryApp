@@ -1,3 +1,4 @@
+## Function for get_all_inventory_items:
 import boto3
 import json
 
