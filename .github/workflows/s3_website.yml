@@ -24,7 +24,7 @@ jobs:
         with:
           fetch-depth: 2
 
-      # 2. Configure AWS credentials (uses pre-installed AWS CLI)
+      # 2. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -33,17 +33,42 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      # 3. Verify AWS CLI version (no installation needed)
-      - name: Check AWS CLI version
+      # 3. Verify files exist
+      - name: Check files to deploy
         run: |
-          aws --version
-          which aws
+          echo "Files to be deployed:"
+          ls -la index.html assets/ css/ js/
 
-      # 4. Upload files to S3 (simplified single-line command)
+      # 4. Upload to S3 (ACL-free version)
       - name: Upload files to S3
-        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --acl public-read --cache-control "max-age=3600"
+        run: |
+          aws s3 sync . s3://finalproject-2025 \
+            --exclude "*" \
+            --include "index.html" \
+            --include "assets/*" \
+            --include "css/*" \
+            --include "js/*" \
+            --cache-control "max-age=3600"
 
-      # 5. CloudFront cache invalidation
+      # 5. Set bucket policy for public access (if needed)
+      - name: Configure public access
+        run: |
+          aws s3api put-bucket-policy \
+            --bucket finalproject-2025 \
+            --policy '{
+              "Version": "2012-10-17",
+              "Statement": [{
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::finalproject-2025/*"
+              }]
+            }'
+
+      # 6. Invalidate CloudFront cache (optional)
       - name: Invalidate CloudFront cache
-        if: success()
-        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/index.html" "/assets/*" "/css/*" "/js/*"
+        if: success() && secrets.CLOUDFRONT_DISTRIBUTION_ID
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/index.html" "/assets/*" "/css/*" "/js/*"
