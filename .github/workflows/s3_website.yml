@@ -1,24 +1,55 @@
-#Fix
 name: Deploy Website to S3 Bucket
 
 on:
   push:
     branches:
-      - 'main'
+      - main
     paths:
       - 'index.html'
+      - 'assets/**'
+      - 'css/**'
+      - 'js/**'
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
     steps:
-      - uses: actions/checkout@v4
-      - name: Set AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4.0.2
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Needed for proper changed files detection
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
-      - name: Copy website to S3
-        run: aws s3 sync . s3://ci-cd-inventory-app-abhay-2025 --exclude "*" --include "index.html"
+
+      - name: List changed files (debugging)
+        run: |
+          echo "Changed files in this push:"
+          git diff --name-only HEAD^ HEAD
+
+      - name: Upload to S3
+        run: |
+          aws s3 sync . s3://ci-cd-inventory-app-abhay-2025 \
+            --exclude "*" \
+            --include "index.html" \
+            --include "assets/*" \
+            --include "css/*" \
+            --include "js/*" \
+            --acl public-read \
+            --cache-control "max-age=3600"
+
+      - name: Invalidate CloudFront cache
+        if: success()
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/index.html" "/assets/*" "/css/*" "/js/*"
