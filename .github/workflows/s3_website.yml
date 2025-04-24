@@ -6,22 +6,22 @@ on:
       - 'main'
     paths:
       - 'index.html'
-      - 'assets/**'  # Added your additional paths
+      - 'assets/**'
       - 'css/**'
       - 'js/**'
 
 jobs:
-  deploy:  # Changed from 'build' to more descriptive 'deploy'
+  deploy:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write  # Added permissions
+      id-token: write
       contents: read
 
     steps:
       - uses: actions/checkout@v4
       
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4  # Updated to latest version
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -29,11 +29,4 @@ jobs:
           aws-region: us-east-1
 
       - name: Upload to S3
-        run: |
-          aws s3 sync . s3://finalproject-2025 \  # Your bucket name
-            --exclude "*" \
-            --include "index.html" \
-            --include "assets/*" \  # Your additional includes
-            --include "css/*" \
-            --include "js/*" \
-            --cache-control "max-age=3600"  # Added caching
+        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --cache-control "max-age=3600"
