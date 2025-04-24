@@ -24,24 +24,39 @@ jobs:
 
       - name: 📦 Deploy Functions
         run: |
-          # List of all Lambda functions in your project
-          FUNCTIONS=(
-            "add_inventory_item"
-            "delete_inventory_item"
-            "get_all_inventory_items"
-            "get_inventory_item"
-            "get_location_inventory_items"
+          # List of all Lambda functions with both naming conventions
+          FUNCTION_PAIRS=(
+            "add_inventory_item:add_inventory_item"
+            "delete_inventory_item:delete_inventory_item"
+            "get_all_inventory_items:get_all_inventory_items"
+            "get_inventory_item:get-inventory-item"  # GitHub dir:underscores | AWS:hyphen
+            "get_location_inventory_items:get_location_inventory_items"
           )
 
-          # Deploy each function if its directory exists
-          for func in "${FUNCTIONS[@]}"; do
-            echo "🚀 Deploying $func function..."
-            cd "Lambda/$func"
-            zip -r function.zip .
-            aws lambda update-function-code \
-              --function-name $func \
-              --zip-file fileb://function.zip \
-              --publish
-            rm function.zip
-            cd ../..
+          for pair in "${FUNCTION_PAIRS[@]}"; do
+            # Split the pair into local dir name and AWS function name
+            IFS=":" read -r local_name aws_name <<< "$pair"
+            
+            echo "🚀 Attempting to deploy $local_name (AWS: $aws_name)..."
+            
+            if [ -d "Lambda/$local_name" ]; then
+              cd "Lambda/$local_name"
+              zip -r function.zip .
+              
+              # Try deployment with error handling
+              if aws lambda update-function-code \
+                --function-name "$aws_name" \
+                --zip-file fileb://function.zip \
+                --publish; then
+                echo "✅ Successfully deployed $aws_name"
+              else
+                echo "⚠️ Failed to deploy $aws_name"
+                # Continue to next function instead of failing
+              fi
+              
+              rm -f function.zip
+              cd ../..
+            else
+              echo "⏩ Directory Lambda/$local_name not found - skipping"
+            fi
           done
