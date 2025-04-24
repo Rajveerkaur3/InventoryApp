@@ -3,72 +3,37 @@ name: Deploy Website to S3 Bucket
 on:
   push:
     branches:
-      - main
+      - 'main'
     paths:
       - 'index.html'
-      - 'assets/**'
+      - 'assets/**'  # Added your additional paths
       - 'css/**'
       - 'js/**'
 
 jobs:
-  deploy:
+  deploy:  # Changed from 'build' to more descriptive 'deploy'
     runs-on: ubuntu-latest
     permissions:
-      id-token: write
+      id-token: write  # Added permissions
       contents: read
 
     steps:
-      # 1. Checkout code
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      # 2. Configure AWS credentials
+      - uses: actions/checkout@v4
+      
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4  # Updated to latest version
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      # 3. Verify files exist
-      - name: Check files to deploy
+      - name: Upload to S3
         run: |
-          echo "Files to be deployed:"
-          ls -la index.html assets/ css/ js/
-
-      # 4. Upload to S3 (ACL-free version)
-      - name: Upload files to S3
-        run: |
-          aws s3 sync . s3://finalproject-2025 \
+          aws s3 sync . s3://finalproject-2025 \  # Your bucket name
             --exclude "*" \
             --include "index.html" \
-            --include "assets/*" \
+            --include "assets/*" \  # Your additional includes
             --include "css/*" \
             --include "js/*" \
-            --cache-control "max-age=3600"
-
-      # 5. Set bucket policy for public access
-      - name: Configure public access
-        run: |
-          aws s3api put-bucket-policy \
-            --bucket finalproject-2025 \
-            --policy '{
-              "Version": "2012-10-17",
-              "Statement": [{
-                "Effect": "Allow",
-                "Principal": "*",
-                "Action": "s3:GetObject",
-                "Resource": "arn:aws:s3:::finalproject-2025/*"
-              }]
-            }'
-
-      # 6. Invalidate CloudFront cache (only if distribution ID exists)
-      - name: Invalidate CloudFront cache
-        if: ${{ success() && secrets.CLOUDFRONT_DISTRIBUTION_ID != '' }}
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/assets/*" "/css/*" "/js/*"
+            --cache-control "max-age=3600"  # Added caching
