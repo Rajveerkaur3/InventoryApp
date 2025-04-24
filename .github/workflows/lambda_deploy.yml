@@ -1,5 +1,4 @@
 name: Deploy Python functions to AWS Lambda
-
 on:
   push:
     branches:
