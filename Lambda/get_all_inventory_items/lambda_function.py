@@ -1,4 +1,4 @@
-## Get_all_Invemtory_Items:
+
 import boto3
 import json
 

@@ -1,0 +1,91 @@
+name: Deploy Lambda Functions to AWS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.py'
+
+jobs:
+  deploy_lambda:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up AWS CLI
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: us-west-2
+
+      - name: List all files (debugging step)
+        run: |
+          echo "Current directory:"
+          pwd
+          echo "Listing all files and folders recursively:"
+          ls -R
+
+      - name: Deploy get_all_inventory_items Lambda Function
+        run: |
+          if [ -d "lambda/get_all_inventory_items" ]; then
+            zip -r get_all_inventory_items.zip lambda/get_all_inventory_items
+            aws lambda update-function-code \
+              --function-name get_all_inventory_items \
+              --zip-file fileb://get_all_inventory_items.zip
+          else
+            echo "Directory lambda/get_all_inventory_items does not exist!"
+            exit 1
+          fi
+
+      - name: Deploy get_inventory_item Lambda Function
+        run: |
+          if [ -d "lambda/get_inventory_item" ]; then
+            zip -r get_inventory_item.zip lambda/get_inventory_item
+            aws lambda update-function-code \
+              --function-name get_inventory_item \
+              --zip-file fileb://get_inventory_item.zip
+          else
+            echo "Directory lambda/get_inventory_item does not exist!"
+            exit 1
+          fi
+
+      - name: Deploy add_inventory_item Lambda Function
+        run: |
+          if [ -d "lambda/add_inventory_item" ]; then
+            zip -r add_inventory_item.zip lambda/add_inventory_item
+            aws lambda update-function-code \
+              --function-name add_inventory_item \
+              --zip-file fileb://add_inventory_item.zip
+          else
+            echo "Directory lambda/add_inventory_item does not exist!"
+            exit 1
+          fi
+
+      - name: Deploy delete_inventory_item Lambda Function
+        run: |
+          if [ -d "lambda/delete_inventory_item" ]; then
+            zip -r delete_inventory_item.zip lambda/delete_inventory_item
+            aws lambda update-function-code \
+              --function-name delete_inventory_item \
+              --zip-file fileb://delete_inventory_item.zip
+          else
+            echo "Directory lambda/delete_inventory_item does not exist!"
+            exit 1
+          fi
+
+      - name: Deploy get_location_inventory_items Lambda Function
+        run: |
+          if [ -d "lambda/get_location_inventory_items" ]; then
+            zip -r get_location_inventory_items.zip lambda/get_location_inventory_items
+            aws lambda update-function-code \
+              --function-name get_location_inventory_items \
+              --zip-file fileb://get_location_inventory_items.zip
+          else
+            echo "Directory lambda/get_location_inventory_items does not exist!"
+            exit 1
+          fi
