@@ -1,15 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Hello World</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory App Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f0f8ff;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e8f4f8;
+            border-radius: 4px;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
-  <header></header>
-  <main>
-    <h1>Hello World from S3!</h1>
-  </main>
-  <footer></footer>
+    <div class="container">
+        <h1>Inventory Management System</h1>
+        <p>Welcome to the demo page for the Inventory App</p>
+        
+        <div class="status">
+            <p>Status: <strong>Connected to S3</strong></p>
+            <p>Last updated: <span id="timestamp"></span></p>
+        </div>
+    </div>
+
+    <script>
+        // Add current date/time
+        document.getElementById('timestamp').textContent = new Date().toLocaleString();
+        
+        // Simple console log to verify script execution
+        console.log('Inventory App demo page loaded');
+    </script>
 </body>
 </html>
-
