@@ -1,4 +1,3 @@
-## Code for add_inventory_item(Lambda Function):
 import json
 import uuid
 from decimal import Decimal
