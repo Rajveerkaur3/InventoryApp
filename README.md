@@ -20,4 +20,3 @@ The **InventoryApp** is a cloud-based inventory management system designed to ma
 
 ---
 
-Great Project!
