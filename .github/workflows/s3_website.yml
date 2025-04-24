@@ -18,11 +18,21 @@ jobs:
       contents: read
 
     steps:
+      # 1. Checkout code
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2  # Required for detecting changed files
+          fetch-depth: 2
 
+      # 2. Install AWS CLI (ensures latest version)
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws --version  # Verify installation
+
+      # 3. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -31,20 +41,19 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Upload files to S3
+      # 4. Debugging: Verify files and permissions
+      - name: Validate environment
         run: |
-          aws s3 sync . s3://finalproject-2025 \  
-            --exclude "*" \
-            --include "index.html" \
-            --include "assets/*" \
-            --include "css/*" \
-            --include "js/*" \
-            --acl public-read \
-            --cache-control "max-age=3600"
+          echo "Current directory: $(pwd)"
+          ls -la index.html assets/ css/ js/
+          aws sts get-caller-identity
+          aws s3 ls s3://finalproject-2025/ || echo "Bucket listing test"
 
-      - name: Invalidate CloudFront cache (optional)
+      # 5. Fixed S3 upload (single-line command)
+      - name: Upload files to S3
+        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --acl public-read --cache-control "max-age=3600"
+
+      # 6. CloudFront cache invalidation (optional)
+      - name: Invalidate CloudFront cache
         if: success()
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/index.html" "/assets/*" "/css/*" "/js/*"
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/index.html" "/assets/*" "/css/*" "/js/*"
