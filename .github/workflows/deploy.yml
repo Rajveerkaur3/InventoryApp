@@ -1,55 +1,59 @@
-name: CI/CD Pipeline
+name: Deploy Website to S3 Bucket
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
     paths:
       - 'index.html'
       - 'assets/**'
       - 'css/**'
       - 'js/**'
-      - '!README.md'  # Explicitly exclude non-relevant files
 
 jobs:
-  deploy_website:
-    name: Deploy Website
+  deploy:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       id-token: write
+      contents: read
 
     steps:
-      - name: Checkout code
+      # 1. Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for proper changed files detection
+          fetch-depth: 2
 
+      # 2. Install AWS CLI (ensures latest version)
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip awscliv2.zip
+          sudo ./aws/install
+          aws --version  # Verify installation
+
+      # 3. Configure AWS credentials
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Upload to S3
+      # 4. Debugging: Verify files and permissions
+      - name: Validate environment
         run: |
-          # Debug changed files
-          echo "Changed files:"
-          git diff --name-only HEAD^ HEAD
-          
-          # Sync only relevant files
-          aws s3 sync . s3://inventoryapp.rrc.ca \
-            --exclude "*" \
-            --include "index.html" \
-            --include "assets/*" \
-            --include "css/*" \
-            --include "js/*" \
-            --acl public-read \
-            --cache-control "max-age=3600"
+          echo "Current directory: $(pwd)"
+          ls -la index.html assets/ css/ js/
+          aws sts get-caller-identity
+          aws s3 ls s3://finalproject-2025/ || echo "Bucket listing test"
 
+      # 5. Fixed S3 upload (single-line command)
+      - name: Upload files to S3
+        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --acl public-read --cache-control "max-age=3600"
+
+      # 6. CloudFront cache invalidation (optional)
       - name: Invalidate CloudFront cache
         if: success()
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-            --paths "/*"
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/index.html" "/assets/*" "/css/*" "/js/*"
