@@ -1,91 +1,49 @@
-name: Deploy Lambda Functions to AWS
+name: Deploy Lambda Functions
 
 on:
+  pull_request:
+    branches:
+      - 'main'
   push:
     branches:
       - main
     paths:
-      - '**/*.py'
+      - 'lambda//lambda_function.py'
 
 jobs:
-  deploy_lambda:
+  deploy:
+    name: Deploy Updated Lambda Function
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        function:
+          - get_all_inventory_items
+          - get_inventory_item
+          - add_inventory_item
+          - delete_inventory_item
+          - get_location_inventory_items
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v3
 
-      - name: Set up AWS CLI
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: us-west-2
+          python-version: '3.12'
 
-      - name: List all files (debugging step)
+      - name: Zip Lambda Function
         run: |
-          echo "Current directory:"
-          pwd
-          echo "Listing all files and folders recursively:"
-          ls -R
+          cd lambda/${{ matrix.function }}
+          zip -r ../../${{ matrix.function }}.zip .
 
-      - name: Deploy get_all_inventory_items Lambda Function
-        run: |
-          if [ -d "lambda/get_all_inventory_items" ]; then
-            zip -r get_all_inventory_items.zip lambda/get_all_inventory_items
-            aws lambda update-function-code \
-              --function-name get_all_inventory_items \
-              --zip-file fileb://get_all_inventory_items.zip
-          else
-            echo "Directory lambda/get_all_inventory_items does not exist!"
-            exit 1
-          fi
-
-      - name: Deploy get_inventory_item Lambda Function
-        run: |
-          if [ -d "lambda/get_inventory_item" ]; then
-            zip -r get_inventory_item.zip lambda/get_inventory_item
-            aws lambda update-function-code \
-              --function-name get_inventory_item \
-              --zip-file fileb://get_inventory_item.zip
-          else
-            echo "Directory lambda/get_inventory_item does not exist!"
-            exit 1
-          fi
-
-      - name: Deploy add_inventory_item Lambda Function
-        run: |
-          if [ -d "lambda/add_inventory_item" ]; then
-            zip -r add_inventory_item.zip lambda/add_inventory_item
-            aws lambda update-function-code \
-              --function-name add_inventory_item \
-              --zip-file fileb://add_inventory_item.zip
-          else
-            echo "Directory lambda/add_inventory_item does not exist!"
-            exit 1
-          fi
-
-      - name: Deploy delete_inventory_item Lambda Function
-        run: |
-          if [ -d "lambda/delete_inventory_item" ]; then
-            zip -r delete_inventory_item.zip lambda/delete_inventory_item
-            aws lambda update-function-code \
-              --function-name delete_inventory_item \
-              --zip-file fileb://delete_inventory_item.zip
-          else
-            echo "Directory lambda/delete_inventory_item does not exist!"
-            exit 1
-          fi
-
-      - name: Deploy get_location_inventory_items Lambda Function
-        run: |
-          if [ -d "lambda/get_location_inventory_items" ]; then
-            zip -r get_location_inventory_items.zip lambda/get_location_inventory_items
-            aws lambda update-function-code \
-              --function-name get_location_inventory_items \
-              --zip-file fileb://get_location_inventory_items.zip
-          else
-            echo "Directory lambda/get_location_inventory_items does not exist!"
-            exit 1
-          fi
+      - name: Deploy to AWS Lambda
+        uses: appleboy/lambda-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          function_name: ${{ matrix.function }}
+          zip_file: ${{ matrix.function }}.zip
+          region: us-east-1
