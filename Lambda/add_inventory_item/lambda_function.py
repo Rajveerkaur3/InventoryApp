@@ -1,7 +1,8 @@
-## Add_Inventory_Item:
+## Add inventory item code:
 import json
 import uuid
 from decimal import Decimal
+
 import boto3
 
 def lambda_handler(event, context):

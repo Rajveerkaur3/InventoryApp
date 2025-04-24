@@ -1,21 +1,24 @@
----
 name: Super-Linter
 
 on:
+  push:
+    branches:
+      - development
+      - main
   pull_request:
-    types: [opened, reopened]
+    branches:
+      - development
+    types: [opened, reopened, synchronize]
 
-permissions: {}
+permissions:
+  contents: read
+  packages: read
+  statuses: write
 
 jobs:
-  build:
-    name: Lint
+  lint:
+    name: Lint Code
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: read
-      statuses: write  # Status checks on PR
 
     steps:
       - name: Checkout code
@@ -23,24 +26,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Super-linter
+      - name: Run Super-Linter with adjusted rules
         uses: super-linter/super-linter@v7.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-          # Fix auto-formatters
+          VALIDATE_PYTHON_MYPY: false  # Disables Mypy type checking
+          VALIDATE_PYTHON_PYINK: false  # Disables Pyink formatting checks
+          VALIDATE_PYTHON_PYLINT: false  # Skips Pylint strict rules
+          VALIDATE_JSCPD: false  # Ignores duplicate code detection
+          VALIDATE_CHECKOV: false
           FIX_HTML_PRETTIER: true
           FIX_PYTHON_BLACK: true
           FIX_YAML_PRETTIER: true
-
-          # Selectively disable noisy/failing linters
-          VALIDATE_PYTHON_PYLINT: false
-          VALIDATE_PYTHON_MYPY: false
-          VALIDATE_PYTHON_ISORT: false
-          VALIDATE_PYTHON_RUFF: false
-          VALIDATE_PYTHON_FLAKE8: false
-
-          # Disable markdown & language style checks if not needed
-          VALIDATE_MARKDOWN: false
-          VALIDATE_MARKDOWN_PRETTIER: false
-          VALIDATE_NATURAL_LANGUAGE: false
