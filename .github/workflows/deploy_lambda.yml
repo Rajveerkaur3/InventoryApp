@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'lambda/**/lambda_function.py'
+      - 'Lambda/**/lambda_function.py'  # Changed to uppercase L
   workflow_dispatch:
 
 jobs:
@@ -15,18 +15,15 @@ jobs:
       contents: read
 
     steps:
-      - name: 🔍 Debug - Show directory structure
+      - name: 🔍 Verify Files
         run: |
           echo "=== WORKING DIRECTORY ==="
           pwd
-          echo "=== LAMBDA FILES ==="
-          ls -la lambda/*/lambda_function.py
-          echo "=== GIT CHANGES ==="
-          git diff --name-only HEAD^ HEAD || echo "Initial commit"
+          echo "=== ACTUAL LAMBDA FILES ==="
+          ls -la Lambda/*/lambda_function.py || echo "Checking uppercase Lambda..."
+          ls -la lambda/*/lambda_function.py || echo "No lambda directory found"
 
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
 
       - name: 🔑 Configure AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,9 +34,9 @@ jobs:
 
       - name: 📦 Deploy Functions
         run: |
-          for func in $(ls lambda/); do
+          for func in $(ls Lambda/); do
             echo "📦 Packaging $func..."
-            cd lambda/$func
+            cd Lambda/$func
             zip -r ../$func.zip .
             echo "🚀 Deploying $func..."
             aws lambda update-function-code \
