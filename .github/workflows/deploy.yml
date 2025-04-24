@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - 'lambda/**/lambda_function.py'  # Updated path
+      - 'lambda/**/lambda_function.py'
 
 jobs:
   deploy:
@@ -28,6 +28,13 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v3
 
+      - name: Debug directory structure
+        run: |
+          echo "Current directory: $(pwd)"
+          ls -R
+          echo "Checking Lambda directory:"
+          ls -l lambda/${{ matrix.function }}/
+
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
@@ -36,8 +43,11 @@ jobs:
       - name: Zip Lambda Function
         run: |
           if [ -d "lambda/${{ matrix.function }}" ]; then
+            echo "Found directory, creating zip..."
             cd lambda/${{ matrix.function }}
             zip -r ../../${{ matrix.function }}.zip .
+            echo "Zip file contents:"
+            unzip -l ../../${{ matrix.function }}.zip
             cd ../..
           else
             echo "Error: lambda/${{ matrix.function }} not found!"
