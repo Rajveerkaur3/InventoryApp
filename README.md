@@ -20,5 +20,4 @@ The **InventoryApp** is a cloud-based inventory management system designed to ma
 
 ---
 
-Clone Process:
-git clone then put repository link.
+
