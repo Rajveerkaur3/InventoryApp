@@ -1,0 +1,55 @@
+name: Deploy Lambda Functions
+
+on:
+  pull_request:
+    branches:
+      - 'main'
+  push:
+    branches:
+      - main
+    paths:
+      - 'lambda/**/lambda_function.py'  # Updated path
+
+jobs:
+  deploy:
+    name: Deploy Updated Lambda Function
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        function:
+          - get_all_inventory_items
+          - get_inventory_item
+          - add_inventory_item
+          - delete_inventory_item
+          - get_location_inventory_items
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Zip Lambda Function
+        run: |
+          if [ -d "lambda/${{ matrix.function }}" ]; then
+            cd lambda/${{ matrix.function }}
+            zip -r ../../${{ matrix.function }}.zip .
+            cd ../..
+          else
+            echo "Error: lambda/${{ matrix.function }} not found!"
+            exit 1
+          fi
+
+      - name: Deploy to AWS Lambda
+        uses: appleboy/lambda-action@master
+        with:
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          function_name: ${{ matrix.function }}
+          zip_file: ${{ matrix.function }}.zip
+          region: us-east-1
