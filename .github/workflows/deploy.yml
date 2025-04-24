@@ -1,65 +1,55 @@
-name: Deploy Lambda Functions
+name: CI/CD Pipeline
 
 on:
-  pull_request:
-    branches:
-      - 'main'
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
-      - 'lambda/**/lambda_function.py'
+      - 'index.html'
+      - 'assets/**'
+      - 'css/**'
+      - 'js/**'
+      - '!README.md'  # Explicitly exclude non-relevant files
 
 jobs:
-  deploy:
-    name: Deploy Updated Lambda Function
+  deploy_website:
+    name: Deploy Website
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        function:
-          - get_all_inventory_items
-          - get_inventory_item
-          - add_inventory_item
-          - delete_inventory_item
-          - get_location_inventory_items
+    permissions:
+      contents: read
+      id-token: write
 
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
-
-      - name: Debug directory structure
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -R
-          echo "Checking Lambda directory:"
-          ls -l lambda/${{ matrix.function }}/
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
         with:
-          python-version: '3.12'
+          fetch-depth: 0  # Required for proper changed files detection
 
-      - name: Zip Lambda Function
-        run: |
-          if [ -d "lambda/${{ matrix.function }}" ]; then
-            echo "Found directory, creating zip..."
-            cd lambda/${{ matrix.function }}
-            zip -r ../../${{ matrix.function }}.zip .
-            echo "Zip file contents:"
-            unzip -l ../../${{ matrix.function }}.zip
-            cd ../..
-          else
-            echo "Error: lambda/${{ matrix.function }} not found!"
-            exit 1
-          fi
-
-      - name: Deploy to AWS Lambda
-        uses: appleboy/lambda-action@master
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
-          function_name: ${{ matrix.function }}
-          zip_file: ${{ matrix.function }}.zip
-          region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Upload to S3
+        run: |
+          # Debug changed files
+          echo "Changed files:"
+          git diff --name-only HEAD^ HEAD
+          
+          # Sync only relevant files
+          aws s3 sync . s3://inventoryapp.rrc.ca \
+            --exclude "*" \
+            --include "index.html" \
+            --include "assets/*" \
+            --include "css/*" \
+            --include "js/*" \
+            --acl public-read \
+            --cache-control "max-age=3600"
+
+      - name: Invalidate CloudFront cache
+        if: success()
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/*"
