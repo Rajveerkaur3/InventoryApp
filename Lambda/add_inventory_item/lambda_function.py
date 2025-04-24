@@ -1,4 +1,3 @@
-## Add inventory item Code:
 import json
 import uuid
 from decimal import Decimal
