@@ -20,9 +20,6 @@ The **InventoryApp** is a cloud-based inventory management system designed to ma
 
 ---  
 
-## How to Set Up  
 
-1. **Clone the Repository**:  
-   ```bash  
-   git clone https://github.com/Rajveerkaur3/InventoryApp.git  
-   cd InventoryApp  
+
+
