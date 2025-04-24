@@ -1,4 +1,4 @@
-## Get_all_Inventory_items:
+
 import boto3
 import json
 
@@ -18,6 +18,7 @@ def lambda_handler(event, context):
             'statusCode': 200,
             'body': json.dumps(items, default=str)  # Use str to handle any special types like Decimal
         }
+    
     except Exception as e:
         print(e)
         return {
