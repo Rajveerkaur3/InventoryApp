@@ -28,5 +28,20 @@ jobs:
           aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws-region: us-east-1
 
-      - name: Upload to S3
-        run: aws s3 sync . s3://finalproject-2025 --exclude "*" --include "index.html" --include "assets/*" --include "css/*" --include "js/*" --cache-control "max-age=3600"
+      - name: Upload files to S3
+        run: |
+          # Upload index.html with proper content type
+          aws s3 cp index.html s3://finalproject-2025/ --content-type "text/html" --cache-control "max-age=3600"
+          
+          # Conditionally upload other directories if they exist
+          if [ -d "assets" ]; then
+            aws s3 cp assets/ s3://finalproject-2025/assets/ --recursive --cache-control "max-age=3600"
+          fi
+          
+          if [ -d "css" ]; then
+            aws s3 cp css/ s3://finalproject-2025/css/ --recursive --cache-control "max-age=3600"
+          fi
+          
+          if [ -d "js" ]; then
+            aws s3 cp js/ s3://finalproject-2025/js/ --recursive --cache-control "max-age=3600"
+          fi
